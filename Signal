@@ -1,16 +1,16 @@
 local InterlockingData = {
     LeverConfig = {
-        ["DE_2"]  = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
-        ["DE_5"]  = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
+        ["DE_02"] = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
+        ["DE_05"] = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
         ["DE_41"] = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
         ["DE_45"] = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
 
-        ["DE_3"]  = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE03" },
-        ["DE_4"]  = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE04" },
-        ["DE_6"]  = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE06" },
-        ["DE_7"]  = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE07" },
-        ["DE_8"]  = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE08" },
-        ["DE_9"]  = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE09" },
+        ["DE_03"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE03" },
+        ["DE_04"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE04" },
+        ["DE_06"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE06" },
+        ["DE_07"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE07" },
+        ["DE_08"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE08" },
+        ["DE_09"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE09" },
         ["DE_10"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE10" },
         ["DE_11"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" },
         ["DE_13"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE13" },
@@ -48,26 +48,26 @@ local InterlockingData = {
     
     Routes = {
         ["Dovedale_Platform3"] = {
-            RequiredLevers = {"DE_3", "DE_18"},
+            RequiredLevers = {"DE_03", "DE_18"},
             Sequence = {
                 {Group = {"DE_18"}},
-                {Group = {"DE_3"}}
+                {Group = {"DE_03"}}
             }
         },
         ["Dovedale_Platform5"] = {
-            RequiredLevers = {"DE_6", "DE_18", "DE_19", "DE_20"},
+            RequiredLevers = {"DE_06", "DE_18", "DE_19", "DE_20"},
             Sequence = {
                 {Group = {"DE_19"}},
                 {Group = {"DE_18", "DE_20"}},
-                {Group = {"DE_6"}}
+                {Group = {"DE_06"}}
             }
         },
         ["Dovedale_Platform6"] = {
-            RequiredLevers = {"DE_8", "DE_18", "DE_19", "DE_20", "DE_21"},
+            RequiredLevers = {"DE_08", "DE_18", "DE_19", "DE_20", "DE_21"},
             Sequence = {
                 {Group = {"DE_19", "DE_21"}},
                 {Group = {"DE_20", "DE_18"}},
-                {Group = {"DE_8"}}
+                {Group = {"DE_08"}}
             }
         },
         ["Satus_Platform1"] = {
