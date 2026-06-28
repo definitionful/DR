@@ -61,6 +61,34 @@ local InterlockingData = {
     -- Arrays inside 'Group' automatically get shuffled upon execution.
     -- ==========================================
     Routes = {
+        -- DOVEDALE CENTRAL ARRIVALS
+        ["DovedaleCentral_Platform3"] = {
+            RequiredLevers = {"DE_3", "DE_18"},
+            Sequence = {
+                {Group = {"DE_18"}},
+                {Group = {"DE_3"}}
+            }
+        },
+        ["DovedaleCentral_Platform5"] = {
+            RequiredLevers = {"DE_6", "DE_18", "DE_19", "DE_20"},
+            Sequence = {
+                {Group = {"DE_19"}},
+                {Group = {"DE_18", "DE_20"}},
+                {Group = {"DE_6"}}
+            }
+        },
+        ["DovedaleCentral_Platform6"] = {
+            RequiredLevers = {"DE_8", "DE_18", "DE_19", "DE_20", "DE_21"},
+            Sequence = {
+                {Group = {"DE_19", "DE_21"}},
+                {Group = {"DE_18", "DE_20"}},
+                {Group = {"DE_8"}}
+            }
+        },
+
+        -- SATUS ARRIVALS
+        -- ... (Rest of your existing code)
+
         -- SATUS ARRIVALS
         ["Satus_Platform1"] = {
             RequiredLevers = {"DE_26", "DE_27", "DE_30", "DE_31", "DE_33", "DE_44"},
