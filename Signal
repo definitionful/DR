@@ -20,16 +20,16 @@ local InterlockingData = {
         ["DE_8"]  = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE08" },
         ["DE_9"]  = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE09" },
         ["DE_10"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE10" },
-        ["DE_11"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" }, -- (No release mentioned in your list)
+        ["DE_11"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" },
         ["DE_13"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE13" },
         ["DE_34"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE34" },
         ["DE_37"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE37" },
         ["DE_38"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE38" },
         ["DE_39"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE39" },
-        ["DE_40"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" }, -- (No release mentioned in your list)
+        ["DE_40"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" },
         ["DE_42"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_DE42" },
-        ["DE_43"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" }, -- (No release mentioned in your list)
-        ["DE_44"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" }, -- (No release mentioned in your list)
+        ["DE_43"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" },
+        ["DE_44"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" },
 
         -- Facing Point Locks (Blue & White over Blue)
         ["DE_14"] = { Type = "Spare FPL", ResetPriority = 3, Color = "White over Blue" },
@@ -54,8 +54,82 @@ local InterlockingData = {
         ["DE_32"] = { Type = "Points",              ResetPriority = 4, Color = "Black" },
     },
 
-    -- Fallback for any levers not explicitly defined (defaults to lowest priority so it doesn't break interlocking)
-    DefaultPriority = 5 
+    DefaultPriority = 5,
+    
+    -- ==========================================
+    -- ROUTE CONFIGURATION
+    -- Arrays inside 'Group' automatically get shuffled upon execution.
+    -- ==========================================
+    Routes = {
+        -- SATUS ARRIVALS
+        ["Satus_Platform1"] = {
+            RequiredLevers = {"DE_26", "DE_27", "DE_30", "DE_31", "DE_33", "DE_44"},
+            Sequence = {
+                {Group = {"DE_26", "DE_27", "DE_30", "DE_31"}},
+                {Group = {"DE_33"}},
+                {Group = {"DE_44"}}
+            }
+        },
+        ["Satus_Platform2"] = {
+            RequiredLevers = {"DE_27", "DE_30", "DE_31", "DE_33", "DE_43"},
+            Sequence = {
+                {Group = {"DE_27", "DE_30"}},
+                {Group = {"DE_31"}},
+                {Group = {"DE_33"}},
+                {Group = {"DE_43"}}
+            }
+        },
+        ["Satus_Platform4"] = {
+            RequiredLevers = {"DE_22", "DE_23", "DE_31", "DE_33", "DE_40"},
+            Sequence = {
+                {Group = {"DE_23"}},
+                {Group = {"DE_22"}},
+                {Group = {"DE_31", "DE_33"}},
+                {Group = {"DE_40"}}
+            }
+        },
+        
+        -- COSDALE HARBOUR ARRIVALS
+        ["Cosdale_Platform2"] = {
+            RequiredLevers = {"DE_11", "DE_12", "DE_13", "DE_14", "DE_16"},
+            Sequence = {
+                {Group = {"DE_14", "DE_16"}},
+                {Group = {"DE_12"}},
+                {Group = {"DE_13"}},
+                {Group = {"DE_11"}}
+            }
+        },
+        ["Cosdale_Platform3"] = {
+            RequiredLevers = {"DE_11", "DE_12", "DE_13", "DE_14", "DE_15", "DE_18"},
+            Sequence = {
+                {Group = {"DE_15"}},
+                {Group = {"DE_14", "DE_18"}},
+                {Group = {"DE_12"}},
+                {Group = {"DE_13"}},
+                {Group = {"DE_11"}}
+            }
+        },
+        ["Cosdale_Platform5"] = {
+            RequiredLevers = {"DE_11", "DE_12", "DE_13", "DE_14", "DE_15", "DE_18", "DE_19", "DE_20"},
+            Sequence = {
+                {Group = {"DE_15", "DE_19"}},
+                {Group = {"DE_14", "DE_18", "DE_20"}},
+                {Group = {"DE_12"}},
+                {Group = {"DE_13"}},
+                {Group = {"DE_11"}}
+            }
+        },
+        ["Cosdale_Platform6"] = {
+            RequiredLevers = {"DE_11", "DE_12", "DE_13", "DE_14", "DE_15", "DE_18", "DE_19", "DE_20", "DE_21"},
+            Sequence = {
+                {Group = {"DE_15", "DE_19", "DE_21"}},
+                {Group = {"DE_14", "DE_18", "DE_20"}},
+                {Group = {"DE_12"}},
+                {Group = {"DE_13"}},
+                {Group = {"DE_11"}}
+            }
+        }
+    }
 }
 
 return InterlockingData
