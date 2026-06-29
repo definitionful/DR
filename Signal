@@ -54,7 +54,7 @@ local InterlockingData = {
                 ["Dovedale_Platform6"] = { RequiredLevers = {"DE_08", "DE_18", "DE_19", "DE_20", "DE_21"}, Sequence = {{Group = {"DE_19", "DE_21"}}, {Group = {"DE_20", "DE_18"}}, {Group = {"DE_08"}}} },
                 ["Satus_Platform1"] = { RequiredLevers = {"DE_26", "DE_27", "DE_30", "DE_31", "DE_33", "DE_44"}, Sequence = {{Group = {"DE_26", "DE_30"}}, {Group = {"DE_27", "DE_31", "DE_33"}}, {Group = {"DE_44"}}} },
                 ["Satus_Platform2"] = { RequiredLevers = {"DE_27", "DE_30", "DE_31", "DE_33", "DE_43"}, Sequence = {{Group = {"DE_30"}}, {Group = {"DE_27", "DE_31", "DE_33"}}, {Group = {"DE_43"}}} },
-                ["Satus_Platform4"] = { RequiredLevers = {"DE_22", "DE_23", "DE_31", "DE_33", "DE_40"}, Sequence = {{Group = {"DE_23"}}, {Group = {"DE_22", "DE_31", "DE_33"}}, {Group = {"DE_40"}}} },
+                ["Satus_Platform4"] = { RequiredLevers = {"DE_23", "DE_31", "DE_33", "DE_40"}, Sequence = {{Group = {"DE_23"}}, {Group = {"DE_31", "DE_33"}}, {Group = {"DE_40"}}} },
                 ["Cosdale_Platform2"] = { RequiredLevers = {"DE_11", "DE_12", "DE_13", "DE_14", "DE_16"}, Sequence = {{Group = {"DE_12"}}, {Group = {"DE_14", "DE_16"}}, {Group = {"DE_13"}}, {Group = {"DE_11"}}} },
                 ["Cosdale_Platform3"] = { RequiredLevers = {"DE_11", "DE_12", "DE_13", "DE_14", "DE_15", "DE_18"}, Sequence = {{Group = {"DE_12", "DE_15"}}, {Group = {"DE_14", "DE_18"}}, {Group = {"DE_13"}}, {Group = {"DE_11"}}} },
                 ["Cosdale_Platform5"] = { RequiredLevers = {"DE_11", "DE_12", "DE_13", "DE_14", "DE_15", "DE_18", "DE_19", "DE_20"}, Sequence = {{Group = {"DE_12", "DE_15", "DE_19"}}, {Group = {"DE_14", "DE_18", "DE_20"}}, {Group = {"DE_13"}}, {Group = {"DE_11"}}} },
@@ -77,11 +77,11 @@ local InterlockingData = {
                     }
                 },
                 ["Departure_Platform6_DC"] = {
-                    RequiredLevers = {"DE_14", "DE_15", "DE_18", "DE_19", "DE_20", "DE_21", "DE_37", "DE_38"},
+                    RequiredLevers = {"DE_14", "DE_15", "DE_19", "DE_21", "DE_37", "DE_38"},
                     Sequence = {
                         {Group = {"DE_15", "DE_19", "DE_21"}},
                         {Group = {"DE_37"}},
-                        {Group = {"DE_14", "DE_18", "DE_20"}},
+                        {Group = {"DE_14"}},
                         {Group = {"DE_38"}}
                     }
                 },
@@ -103,10 +103,10 @@ local InterlockingData = {
                     }
                 },
                 ["Departure_Platform6_CH"] = {
-                    RequiredLevers = {"DE_12", "DE_14", "DE_15", "DE_18", "DE_19", "DE_20", "DE_21", "DE_34", "DE_38"},
+                    RequiredLevers = {"DE_12", "DE_14", "DE_15", "DE_19", "DE_21", "DE_34", "DE_38"},
                     Sequence = {
                         {Group = {"DE_12", "DE_15", "DE_19", "DE_21"}},
-                        {Group = {"DE_14", "DE_18", "DE_20"}},
+                        {Group = {"DE_14"}},
                         {Group = {"DE_38", "DE_34"}}
                     }
                 }
