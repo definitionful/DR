@@ -43,7 +43,7 @@ local InterlockingData = {
                 ["DE_21"] = { Type = "Combined Points/FPL", ResetPriority = 4, Color = "Blue over Black" },
                 ["DE_23"] = { Type = "Points",              ResetPriority = 4, Color = "Black" },
                 ["DE_26"] = { Type = "Points",              ResetPriority = 4, Color = "Black" },
-                ["DE_28"] = { Type = "Points",              ResetPriority = 4, Color = "Black" },
+                ["DE_28"] = { Type = "Points",              ResetPriority = 3.9, Color = "Black" },
                 ["DE_30"] = { Type = "Points",              ResetPriority = 4, Color = "Black" },
                 ["DE_32"] = { Type = "Points",              ResetPriority = 4, Color = "Black" },
             },
@@ -85,7 +85,36 @@ local InterlockingData = {
                         {Group = {"DE_38"}}
                     }
                 },
-
+                ["Departure_Platform1_SAT"] = {
+                    RequiredLevers = {"DE_09", "DE_26", "DE_30"},
+                    Sequence = {
+                        {Group = {"DE_26", "DE_30"}},
+                        {Group = {"DE_09"}}
+                    }
+                },
+                ["Departure_Platform2_SAT"] = {
+                    RequiredLevers = {"DE_10", "DE_30"},
+                    Sequence = {
+                        {Group = {"DE_30"}},
+                        {Group = {"DE_10"}}
+                    }
+                },
+                ["Departure_Platform3_SAT"] = {
+                    RequiredLevers = {"DE_04", "DE_28", "DE_30", "DE_32"},
+                    Sequence = {
+                        {Group = {"DE_30"}},
+                        {Group = {"DE_28", "DE_32"}},
+                        {Group = {"DE_04"}}
+                    }
+                },
+                ["Departure_Platform5_SAT"] = {
+                    RequiredLevers = {"DE_07", "DE_22", "DE_23", "DE_32"},
+                    Sequence = {
+                        {Group = {"DE_23", "DE_32"}},
+                        {Group = {"DE_22"}},
+                        {Group = {"DE_07"}}
+                    }
+                },
                 ["Departure_Platform2_CH"] = {
                     RequiredLevers = {"DE_12", "DE_34", "DE_42"},
                     Sequence = {
