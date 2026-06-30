@@ -1,0 +1,94 @@
+local Notifications = {}
+local FluentUI = nil
+
+-- Initializes the module with the Fluent instance so it can push notifications
+function Notifications.Init(fluentInstance)
+    FluentUI = fluentInstance
+end
+
+-- Base helper function
+local function sendMsg(title, content, duration)
+    if FluentUI then
+        FluentUI:Notify({ Title = title, Content = content, Duration = duration or 4 })
+    end
+end
+
+-- ==========================================
+-- Notification Methods
+-- ==========================================
+
+function Notifications.MenuWarning() 
+    sendMsg("Notice", "Please exit the menu before activating this feature.", 4) 
+end
+
+function Notifications.SelectLocation() 
+    sendMsg("Notice", "Please select at least one location from the dropdown first.", 4) 
+end
+
+function Notifications.AlreadyHosting() 
+    sendMsg("Notice", "You are already hosting a signal box.", 4) 
+end
+
+function Notifications.XPTooLow() 
+    sendMsg("Notice", "Your XP does not meet the requirements for any of the selected signal boxes.", 5) 
+end
+
+function Notifications.Assigning(boxName) 
+    sendMsg("Assignment", string.format("Assigning you to the %s Signal Box...", boxName), 3) 
+end
+
+function Notifications.AssignSuccess(boxName) 
+    sendMsg("Success", string.format("Successfully assigned to the %s Signal Box!", boxName), 4) 
+end
+
+function Notifications.PositionRequired() 
+    sendMsg("Position Required", "You must return inside the signal box before interacting with the lever frame.", 4) 
+end
+
+function Notifications.CrossingUnsecured() 
+    sendMsg("Crossing Unsecured", "The Dovedale East Level Crossing has not been secured.", 4) 
+end
+
+function Notifications.ClearanceDenied(destination)
+    -- Dynamically changes block type based on the location
+    local blockType = destination == "Dovedale Central" and "Telegraph" or "Tokenless"
+    sendMsg("Clearance Denied", string.format("The %s Block to %s has not been cleared.", blockType, destination), 4)
+end
+
+function Notifications.NotHosting(boxName) 
+    sendMsg("Access Denied", string.format("You are not currently hosting the %s Box.", boxName), 4) 
+end
+
+function Notifications.DataMissing() 
+    sendMsg("Data Missing", "Route module failed to initialize. Try re-executing.", 5) 
+end
+
+function Notifications.RouteNotFound(route) 
+    sendMsg("Error", "Route data not found for: " .. tostring(route), 4) 
+end
+
+function Notifications.NoFrame(frameName) 
+    sendMsg("Error", string.format("The %s lever frame could not be located.", frameName), 4) 
+end
+
+function Notifications.LeversActive() 
+    sendMsg("Notice", "One or more required levers are already active. Please reset the frame first.", 5) 
+end
+
+function Notifications.LeverFailed(lever) 
+    sendMsg("Notice", string.format("Failed to interact with %s. Sequence aborted.", lever), 4) 
+end
+
+function Notifications.RoutingComplete(origin, dest) 
+    sendMsg("Routing Complete", string.format("Dispatching train from %s to %s.", origin, dest), 5) 
+end
+
+function Notifications.InterlockingError() 
+    sendMsg("Error", "Interlocking data failed to initialize.", 4) 
+end
+
+function Notifications.ResetComplete() 
+    sendMsg("Reset Complete", "Levers reset successfully in interlocking order.", 4) 
+end
+
+return Notifications
