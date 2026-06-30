@@ -10,7 +10,6 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.RightControl
 })
 
--- 1. ADDED ALL TABS WITH FULL NAMES
 local Tabs = {
     Main = Window:AddTab({ Title = "Box Automation", Icon = "server" }),
     AB   = Window:AddTab({ Title = "Ashburn", Icon = "git-merge" }),
@@ -37,11 +36,21 @@ local task_wait = task.wait
 local os_clock = os.clock
 local math_random = math.random
 
+-- 4. Handling HTTP Initialization Failures Safely
 local InterlockingModule = nil
-pcall(function()
+local httpSuccess, httpErr = pcall(function()
     local url = "https://raw.githubusercontent.com/definitionful/Signal/refs/heads/main/Signal"
     InterlockingModule = loadstring(game:HttpGet(url))()
 end)
+
+if not httpSuccess or type(InterlockingModule) ~= "table" then
+    Fluent:Notify({
+        Title = "Initialization Failed",
+        Content = "Failed to load interlocking data. Please check your connection or the script URL.",
+        Duration = 8
+    })
+    return -- Safely halt execution
+end
 
 local LocationData = {
     { ID = "AB",  Name = "Ashburn",            Priority = 1 },
@@ -84,22 +93,30 @@ end
 
 local isDovedaleActive = false
 
-task.spawn(function()
-    while task_wait(1) do
-        local hostUI = PlayerGui:FindFirstChild("BoxHostUI")
-        if hostUI and hostUI.Enabled then
-            local manageBox = hostUI:FindFirstChild("ManageBox")
-            local header = manageBox and manageBox:FindFirstChild("Header")
-            local title = header and header:FindFirstChild("Title")
-            
-            if title and title.Text == "DE Box" then
-                isDovedaleActive = true
-                continue
-            end
+-- 3. Event-Driven Optimization over Polling
+local function updateBoxState()
+    local hostUI = PlayerGui:FindFirstChild("BoxHostUI")
+    if hostUI and hostUI.Enabled then
+        local manageBox = hostUI:FindFirstChild("ManageBox")
+        local title = manageBox and manageBox:FindFirstChild("Header") and manageBox.Header:FindFirstChild("Title")
+        if title and title.Text == "DE Box" then
+            isDovedaleActive = true
+            return
         end
-        isDovedaleActive = false
+    end
+    isDovedaleActive = false
+end
+
+PlayerGui.DescendantAdded:Connect(function(descendant)
+    if descendant.Name == "BoxHostUI" then
+        descendant:GetPropertyChangedSignal("Enabled"):Connect(updateBoxState)
+        updateBoxState()
+    elseif descendant.Name == "Title" and descendant.Parent and descendant.Parent.Name == "Header" then
+        descendant:GetPropertyChangedSignal("Text"):Connect(updateBoxState)
+        updateBoxState()
     end
 end)
+updateBoxState()
 
 local BoxToggle = Tabs.Main:AddToggle("AutoHostToggle", {
     Title = "Enable Auto-Host",
@@ -218,7 +235,6 @@ local function pullLeverToState(frameDE, leverName, targetState)
 
     if pulled and clickDetector then
         if pulled.Value ~= targetState then
-            
             if targetState == true and InterlockingModule and InterlockingModule.Boxes and InterlockingModule.Boxes.DE.LeverConfig then
                 local config = InterlockingModule.Boxes.DE.LeverConfig[leverName]
                 if config and config.ReleaseName then
@@ -254,17 +270,11 @@ local function pullLeverToState(frameDE, leverName, targetState)
     return false
 end
 
--- 2. ADDED LEVER LOCKS SYSTEM
-local LeverLocks = {} -- Tracks levers currently in animation
+local LeverLocks = {}
 
 local function executeRoute(routeKey, originName, platformName)
     if not isDovedaleActive then
         Fluent:Notify({ Title = "Access Denied", Content = "You are not currently hosting the Dovedale East Box.", Duration = 4 })
-        return
-    end
-
-    if not InterlockingModule or not InterlockingModule.Boxes or not InterlockingModule.Boxes.DE.Routes then
-        Fluent:Notify({ Title = "Data Missing", Content = "Route module failed to initialize. Try re-executing.", Duration = 5 })
         return
     end
 
@@ -274,7 +284,6 @@ local function executeRoute(routeKey, originName, platformName)
         return
     end
 
-    -- Check if any of the required levers are currently locked by a previous action
     for _, name in ipairs(routeData.RequiredLevers) do
         if LeverLocks[name] then
             Fluent:Notify({ Title = "Please Wait", Content = "Levers for this route (" .. name .. ") are currently in motion.", Duration = 3 })
@@ -283,7 +292,6 @@ local function executeRoute(routeKey, originName, platformName)
     end
 
     task.spawn(function()
-        -- Lock the required levers before starting
         for _, name in ipairs(routeData.RequiredLevers) do
             LeverLocks[name] = true
         end
@@ -327,7 +335,6 @@ local function executeRoute(routeKey, originName, platformName)
             local success = pullLeverToState(frameDE, leverName, true)
             if not success then
                 Fluent:Notify({ Title = "Notice", Content = string.format("Failed to interact with %s. Sequence aborted.", leverName), Duration = 4 })
-                -- Make sure to unlock on failure
                 for _, name in ipairs(routeData.RequiredLevers) do LeverLocks[name] = false end
                 return
             end
@@ -335,8 +342,6 @@ local function executeRoute(routeKey, originName, platformName)
         end
 
         Fluent:Notify({ Title = "Routing Complete", Content = string.format("Dispatching train from %s to %s.", originName, platformName), Duration = 5 })
-
-        -- Wait an additional human-reasonable delay before unlocking the levers
         task_wait(2)
         
         for _, name in ipairs(routeData.RequiredLevers) do
@@ -351,330 +356,119 @@ end
 
 local function checkDECrossing()
     local crossing = Workspace:FindFirstChild("DECrossing")
-    if not crossing then return false end
-    
-    local active = crossing:FindFirstChild("Active")
-    local free = crossing:FindFirstChild("Free")
-    
-    if active and free and active.Value == true and free.Value == true then
-        return true
+    if crossing and crossing:FindFirstChild("Active") and crossing:FindFirstChild("Free") then
+        if crossing.Active.Value and crossing.Free.Value then return true end
     end
-    
-    return false
+    return false, "The Dovedale East Level Crossing has not been secured."
 end
 
 local function checkDCClearance()
     local telegraph = Workspace:FindFirstChild("PenguinTelegraph")
-    if not telegraph then return false end
-    
-    local link = telegraph:FindFirstChild("DE - DC")
-    if not link then return false end
-    
-    local target = link:FindFirstChild("DC")
-    if not target then return false end
-    
-    local state = target:FindFirstChild("State")
-    if state and state.Value == 1 then
-        return true
+    if telegraph and telegraph:FindFirstChild("DE - DC") and telegraph["DE - DC"]:FindFirstChild("DC") then
+        local state = telegraph["DE - DC"].DC:FindFirstChild("State")
+        if state and state.Value == 1 then return true end
     end
-    
-    return false
+    return false, "The Telegraph Block to Dovedale Central has not been cleared."
 end
 
 local function checkSATClearance()
     local block = Workspace:FindFirstChild("TokenlessBlocks DE - SAT")
-    if not block then return false end
-    
-    local states = block:FindFirstChild("States")
-    if not states then return false end
-    
-    local dial = states:FindFirstChild("Dial")
-    
-    if dial and dial.Value == 3 then
-        return true
+    if block and block:FindFirstChild("States") and block.States:FindFirstChild("Dial") then
+        if block.States.Dial.Value == 3 then return true end
     end
-    
-    return false
+    return false, "The Tokenless Block to Satus has not been cleared."
 end
 
 local function checkCHClearance()
     local block = Workspace:FindFirstChild("TokenlessBlocks DE - CH")
-    if not block then return false end
-    
-    local states = block:FindFirstChild("States")
-    if not states then return false end
-    
-    local dial = states:FindFirstChild("Dial")
-    
-    if dial and dial.Value == 3 then
-        return true
+    if block and block:FindFirstChild("States") and block.States:FindFirstChild("Dial") then
+        if block.States.Dial.Value == 3 then return true end
     end
-    
-    return false
+    return false, "The Tokenless Block to Cosdale Harbour has not been cleared."
 end
 
 -- ========================================================
+-- 2. Boilerplate Reduction via Data-Driven UI
+-- ========================================================
 
-Tabs.DE:AddSection("Arrivals from Dovedale Central")
+local RouteUIConfig = {
+    {
+        Section = "Arrivals from Dovedale Central",
+        Buttons = {
+            { Title = "Route to Platform 3", Desc = "Routes incoming train from Dovedale Central to Platform 3.", Route = "Dovedale_Platform3", Origin = "Dovedale Central", Dest = "Platform 3", Checks = {checkDECrossing} },
+            { Title = "Route to Platform 5", Desc = "Routes incoming train from Dovedale Central to Platform 5.", Route = "Dovedale_Platform5", Origin = "Dovedale Central", Dest = "Platform 5", Checks = {checkDECrossing} },
+            { Title = "Route to Platform 6", Desc = "Routes incoming train from Dovedale Central to Platform 6.", Route = "Dovedale_Platform6", Origin = "Dovedale Central", Dest = "Platform 6", Checks = {checkDECrossing} },
+        }
+    },
+    {
+        Section = "Departures to Dovedale Central",
+        Buttons = {
+            { Title = "Dispatch Platform 2", Desc = "Routes outgoing train from Platform 2 to Dovedale Central.", Route = "Departure_Platform2_DC", Origin = "Platform 2", Dest = "Dovedale Central", Checks = {checkDECrossing, checkDCClearance} },
+            { Title = "Dispatch Platform 4", Desc = "Routes outgoing train from Platform 4 to Dovedale Central.", Route = "Departure_Platform4_DC", Origin = "Platform 4", Dest = "Dovedale Central", Checks = {checkDECrossing, checkDCClearance} },
+            { Title = "Dispatch Platform 6", Desc = "Routes outgoing train from Platform 6 to Dovedale Central.", Route = "Departure_Platform6_DC", Origin = "Platform 6", Dest = "Dovedale Central", Checks = {checkDECrossing, checkDCClearance} },
+        }
+    },
+    {
+        Section = "Arrivals from Satus",
+        Buttons = {
+            { Title = "Route to Platform 1", Desc = "Routes incoming train from Satus to Platform 1.", Route = "Satus_Platform1", Origin = "Satus", Dest = "Platform 1" },
+            { Title = "Route to Platform 2", Desc = "Routes incoming train from Satus to Platform 2.", Route = "Satus_Platform2", Origin = "Satus", Dest = "Platform 2" },
+            { Title = "Route to Platform 4", Desc = "Routes incoming train from Satus to Platform 4.", Route = "Satus_Platform4", Origin = "Satus", Dest = "Platform 4" },
+        }
+    },
+    {
+        Section = "Departures to Satus",
+        Buttons = {
+            { Title = "Dispatch Platform 1", Desc = "Routes outgoing train from Platform 1 to Satus.", Route = "Departure_Platform1_SAT", Origin = "Platform 1", Dest = "Satus", Checks = {checkSATClearance} },
+            { Title = "Dispatch Platform 2", Desc = "Routes outgoing train from Platform 2 to Satus.", Route = "Departure_Platform2_SAT", Origin = "Platform 2", Dest = "Satus", Checks = {checkSATClearance} },
+            { Title = "Dispatch Platform 3", Desc = "Routes outgoing train from Platform 3 to Satus.", Route = "Departure_Platform3_SAT", Origin = "Platform 3", Dest = "Satus", Checks = {checkSATClearance} },
+            { Title = "Dispatch Platform 5", Desc = "Routes outgoing train from Platform 5 to Satus.", Route = "Departure_Platform5_SAT", Origin = "Platform 5", Dest = "Satus", Checks = {checkSATClearance} },
+        }
+    },
+    {
+        Section = "Arrivals from Cosdale Harbour",
+        Buttons = {
+            { Title = "Route to Platform 2", Desc = "Routes incoming train from Cosdale Harbour to Platform 2.", Route = "Cosdale_Platform2", Origin = "Cosdale Harbour", Dest = "Platform 2", Checks = {checkDECrossing} },
+            { Title = "Route to Platform 3", Desc = "Routes incoming train from Cosdale Harbour to Platform 3.", Route = "Cosdale_Platform3", Origin = "Cosdale Harbour", Dest = "Platform 3", Checks = {checkDECrossing} },
+            { Title = "Route to Platform 5", Desc = "Routes incoming train from Cosdale Harbour to Platform 5.", Route = "Cosdale_Platform5", Origin = "Cosdale Harbour", Dest = "Platform 5", Checks = {checkDECrossing} },
+            { Title = "Route to Platform 6", Desc = "Routes incoming train from Cosdale Harbour to Platform 6.", Route = "Cosdale_Platform6", Origin = "Cosdale Harbour", Dest = "Platform 6", Checks = {checkDECrossing} },
+        }
+    },
+    {
+        Section = "Departures to Cosdale Harbour",
+        Buttons = {
+            { Title = "Dispatch Platform 2", Desc = "Routes outgoing train from Platform 2 to Cosdale Harbour.", Route = "Departure_Platform2_CH", Origin = "Platform 2", Dest = "Cosdale Harbour", Checks = {checkDECrossing, checkCHClearance} },
+            { Title = "Dispatch Platform 4", Desc = "Routes outgoing train from Platform 4 to Cosdale Harbour.", Route = "Departure_Platform4_CH", Origin = "Platform 4", Dest = "Cosdale Harbour", Checks = {checkDECrossing, checkCHClearance} },
+            { Title = "Dispatch Platform 6", Desc = "Routes outgoing train from Platform 6 to Cosdale Harbour.", Route = "Departure_Platform6_CH", Origin = "Platform 6", Dest = "Cosdale Harbour", Checks = {checkDECrossing, checkCHClearance} },
+        }
+    }
+}
 
-Tabs.DE:AddButton({
-    Title = "Route to Platform 3",
-    Description = "Routes incoming train from Dovedale Central to Platform 3.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        executeRoute("Dovedale_Platform3", "Dovedale Central", "Platform 3") 
+for _, sectionData in ipairs(RouteUIConfig) do
+    Tabs.DE:AddSection(sectionData.Section)
+    for _, btn in ipairs(sectionData.Buttons) do
+        Tabs.DE:AddButton({
+            Title = btn.Title,
+            Description = btn.Desc,
+            Callback = function()
+                if btn.Checks then
+                    for _, checkFunc in ipairs(btn.Checks) do
+                        local passed, errMsg = checkFunc()
+                        if not passed then
+                            Fluent:Notify({ Title = "Clearance Denied", Content = errMsg, Duration = 4 })
+                            return
+                        end
+                    end
+                end
+                executeRoute(btn.Route, btn.Origin, btn.Dest)
+            end
+        })
     end
-})
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 5",
-    Description = "Routes incoming train from Dovedale Central to Platform 5.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        executeRoute("Dovedale_Platform5", "Dovedale Central", "Platform 5") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 6",
-    Description = "Routes incoming train from Dovedale Central to Platform 6.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        executeRoute("Dovedale_Platform6", "Dovedale Central", "Platform 6") 
-    end
-})
-
-Tabs.DE:AddSection("Departures to Dovedale Central")
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 2",
-    Description = "Routes outgoing train from Platform 2 to Dovedale Central.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkDCClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Telegraph Block to Dovedale Central has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform2_DC", "Platform 2", "Dovedale Central") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 4",
-    Description = "Routes outgoing train from Platform 4 to Dovedale Central.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkDCClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Telegraph Block to Dovedale Central has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform4_DC", "Platform 4", "Dovedale Central") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 6",
-    Description = "Routes outgoing train from Platform 6 to Dovedale Central.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkDCClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Telegraph Block to Dovedale Central has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform6_DC", "Platform 6", "Dovedale Central") 
-    end
-})
-
-Tabs.DE:AddSection("Arrivals from Satus")
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 1",
-    Description = "Routes incoming train from Satus to Platform 1.",
-    Callback = function() executeRoute("Satus_Platform1", "Satus", "Platform 1") end
-})
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 2",
-    Description = "Routes incoming train from Satus to Platform 2.",
-    Callback = function() executeRoute("Satus_Platform2", "Satus", "Platform 2") end
-})
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 4",
-    Description = "Routes incoming train from Satus to Platform 4.",
-    Callback = function() executeRoute("Satus_Platform4", "Satus", "Platform 4") end
-})
-
-Tabs.DE:AddSection("Departures to Satus")
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 1",
-    Description = "Routes outgoing train from Platform 1 to Satus.",
-    Callback = function() 
-        if not checkSATClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Satus has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform1_SAT", "Platform 1", "Satus") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 2",
-    Description = "Routes outgoing train from Platform 2 to Satus.",
-    Callback = function() 
-        if not checkSATClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Satus has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform2_SAT", "Platform 2", "Satus") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 3",
-    Description = "Routes outgoing train from Platform 3 to Satus.",
-    Callback = function() 
-        if not checkSATClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Satus has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform3_SAT", "Platform 3", "Satus") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 5",
-    Description = "Routes outgoing train from Platform 5 to Satus.",
-    Callback = function() 
-        if not checkSATClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Satus has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform5_SAT", "Platform 5", "Satus") 
-    end
-})
-
-Tabs.DE:AddSection("Arrivals from Cosdale Harbour")
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 2",
-    Description = "Routes incoming train from Cosdale Harbour to Platform 2.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        executeRoute("Cosdale_Platform2", "Cosdale Harbour", "Platform 2") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 3",
-    Description = "Routes incoming train from Cosdale Harbour to Platform 3.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        executeRoute("Cosdale_Platform3", "Cosdale Harbour", "Platform 3") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 5",
-    Description = "Routes incoming train from Cosdale Harbour to Platform 5.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        executeRoute("Cosdale_Platform5", "Cosdale Harbour", "Platform 5") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Route to Platform 6",
-    Description = "Routes incoming train from Cosdale Harbour to Platform 6.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        executeRoute("Cosdale_Platform6", "Cosdale Harbour", "Platform 6") 
-    end
-})
-
-Tabs.DE:AddSection("Departures to Cosdale Harbour")
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 2",
-    Description = "Routes outgoing train from Platform 2 to Cosdale Harbour.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkCHClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Cosdale Harbour has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform2_CH", "Platform 2", "Cosdale Harbour") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 4",
-    Description = "Routes outgoing train from Platform 4 to Cosdale Harbour.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkCHClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Cosdale Harbour has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform4_CH", "Platform 4", "Cosdale Harbour") 
-    end
-})
-
-Tabs.DE:AddButton({
-    Title = "Dispatch Platform 6",
-    Description = "Routes outgoing train from Platform 6 to Cosdale Harbour.",
-    Callback = function() 
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkCHClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Cosdale Harbour has not been cleared.", Duration = 4 })
-            return
-        end
-        executeRoute("Departure_Platform6_CH", "Platform 6", "Cosdale Harbour") 
-    end
-})
+end
 
 Tabs.DE:AddSection("Frame Control")
 
+-- 1. Dynamic Lever Management (Eliminating Hardcoding)
 Tabs.DE:AddButton({
     Title = "Reset Lever Frame",
     Description = "Safely returns all active levers to default in strict interlocking order.",
@@ -684,7 +478,6 @@ Tabs.DE:AddButton({
             return
         end
 
-        -- Check if any levers are currently active/in transit to prevent resetting during routing
         for _, isLocked in pairs(LeverLocks) do
             if isLocked then
                 Fluent:Notify({ Title = "Please Wait", Content = "Routes are currently being set. Cannot reset frame.", Duration = 4 })
@@ -693,9 +486,11 @@ Tabs.DE:AddButton({
         end
 
         task.spawn(function()
-            -- Lock all 49 potential Dovedale East levers to prevent routing commands during the reset
-            for i = 1, 49 do
-                LeverLocks[string.format("DE_%02d", i)] = true
+            local leverConfig = InterlockingModule.Boxes.DE.LeverConfig
+            
+            -- Dynamically lock all configured levers
+            for leverName, _ in pairs(leverConfig) do
+                LeverLocks[leverName] = true
             end
 
             local signalSystems = Workspace:FindFirstChild("Interlocking_Switches/Signals")
@@ -704,27 +499,17 @@ Tabs.DE:AddButton({
 
             if not frameDE then
                 Fluent:Notify({ Title = "Error", Content = "The Dovedale East lever frame could not be located.", Duration = 4 })
-                for i = 1, 49 do LeverLocks[string.format("DE_%02d", i)] = false end
-                return
-            end
-
-            if not InterlockingModule or not InterlockingModule.Boxes or not InterlockingModule.Boxes.DE.LeverConfig then
-                Fluent:Notify({ Title = "Error", Content = "Interlocking data failed to initialize.", Duration = 4 })
-                for i = 1, 49 do LeverLocks[string.format("DE_%02d", i)] = false end
+                for leverName, _ in pairs(leverConfig) do LeverLocks[leverName] = false end
                 return
             end
 
             local activeLevers = {}
-            for i = 1, 49 do
-                local leverName = string.format("DE_%02d", i)
+            for leverName, config in pairs(leverConfig) do
                 local lever = frameDE:FindFirstChild(leverName)
-                
                 if lever then
                     local pulled = lever:FindFirstChild("Values") and lever.Values:FindFirstChild("Pulled")
                     if pulled and pulled.Value == true then
-                        local leverData = InterlockingModule.Boxes.DE.LeverConfig[leverName]
-                        local priority = leverData and leverData.ResetPriority or (InterlockingModule.Boxes.DE.DefaultPriority or 5)
-                        
+                        local priority = config.ResetPriority or (InterlockingModule.Boxes.DE.DefaultPriority or 5)
                         table.insert(activeLevers, { Name = leverName, Priority = priority })
                     end
                 end
@@ -741,12 +526,11 @@ Tabs.DE:AddButton({
             end
 
             Fluent:Notify({ Title = "Reset Complete", Content = "Levers reset successfully in interlocking order.", Duration = 4 })
-            
-            -- Human-reasonable delay before the frame is unlocked again
             task_wait(2)
             
-            for i = 1, 49 do
-                LeverLocks[string.format("DE_%02d", i)] = false
+            -- Dynamically unlock
+            for leverName, _ in pairs(leverConfig) do
+                LeverLocks[leverName] = false
             end
         end)
     end
