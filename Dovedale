@@ -1,5 +1,13 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
+-- Initialize Custom Messages Module
+local Messages = nil
+pcall(function()
+    local url = "YOUR_MESSAGES_RAW_URL_HERE" 
+    Messages = loadstring(game:HttpGet(url))()
+    Messages.Init(Fluent)
+end)
+
 local Window = Fluent:CreateWindow({
     Title = "Signal Box Manager",
     SubTitle = "Automated Hosting & Routing",
@@ -136,7 +144,7 @@ BoxToggle:OnChanged(function(State)
             local success, err = pcall(function()
                 local inMenu = LocalPlayer:FindFirstChild("InMenu")
                 if inMenu and inMenu.Value then
-                    Fluent:Notify({ Title = "Notice", Content = "Please exit the menu before activating this feature.", Duration = 4 })
+                    if Messages then Messages.MenuWarning() end
                     return "STOP"
                 end
 
@@ -148,13 +156,13 @@ BoxToggle:OnChanged(function(State)
                 end
 
                 if #activeSelections == 0 then
-                    Fluent:Notify({ Title = "Notice", Content = "Please select at least one location from the dropdown first.", Duration = 4 })
+                    if Messages then Messages.SelectLocation() end
                     return "STOP"
                 end
 
                 local hostUI = PlayerGui:FindFirstChild("BoxHostUI")
                 if hostUI and hostUI.Enabled then
-                    Fluent:Notify({ Title = "Notice", Content = "You are already hosting a signal box.", Duration = 4 })
+                    if Messages then Messages.AlreadyHosting() end
                     return "STOP"
                 end
 
@@ -186,12 +194,12 @@ BoxToggle:OnChanged(function(State)
                                     fireproximityprompt(prompt)
                                 end
 
-                                Fluent:Notify({ Title = "Assignment", Content = string.format("Assigning you to the %s Signal Box...", boxData.Name), Duration = 3 })
+                                if Messages then Messages.Assigning(boxData.Name) end
                                 task_wait(2.2)
 
                                 local updatedHostUI = PlayerGui:FindFirstChild("BoxHostUI")
                                 if updatedHostUI and updatedHostUI.Enabled then
-                                    Fluent:Notify({ Title = "Success", Content = string.format("Successfully assigned to the %s Signal Box!", boxData.Name), Duration = 4 })
+                                    if Messages then Messages.AssignSuccess(boxData.Name) end
                                     return "STOP"
                                 end
                             end
@@ -200,7 +208,7 @@ BoxToggle:OnChanged(function(State)
                 end
 
                 if not meetsAnyRequirement then
-                    Fluent:Notify({ Title = "Notice", Content = "Your XP does not meet the requirements for any of the selected signal boxes.", Duration = 5 })
+                    if Messages then Messages.XPTooLow() end
                     return "STOP"
                 end
             end)
@@ -265,19 +273,21 @@ local function pullLeverToState(frameDE, leverName, targetState)
 end
 
 local function executeRoute(routeKey, originName, platformName)
+    if not Messages then return end
+
     if not isDovedaleActive then
-        Fluent:Notify({ Title = "Access Denied", Content = "You are not currently hosting the Dovedale East Box.", Duration = 4 })
+        Messages.NotHosting("Dovedale East")
         return
     end
 
     if not InterlockingModule or not InterlockingModule.Boxes or not InterlockingModule.Boxes.DE.Routes then
-        Fluent:Notify({ Title = "Data Missing", Content = "Route module failed to initialize. Try re-executing.", Duration = 5 })
+        Messages.DataMissing()
         return
     end
 
     local routeData = InterlockingModule.Boxes.DE.Routes[routeKey]
     if not routeData then
-        Fluent:Notify({ Title = "Error", Content = "Route data not found for: " .. tostring(routeKey), Duration = 4 })
+        Messages.RouteNotFound(routeKey)
         return
     end
 
@@ -287,7 +297,7 @@ local function executeRoute(routeKey, originName, platformName)
         local frameDE = leverFrames and leverFrames:FindFirstChild("DE")
 
         if not frameDE then
-            Fluent:Notify({ Title = "Error", Content = "The Dovedale East lever frame could not be located.", Duration = 4 })
+            Messages.NoFrame("Dovedale East")
             return
         end
 
@@ -296,7 +306,7 @@ local function executeRoute(routeKey, originName, platformName)
             local pulled = lever and lever:FindFirstChild("Values") and lever.Values:FindFirstChild("Pulled")
             
             if not pulled or pulled.Value == true then
-                Fluent:Notify({ Title = "Notice", Content = "One or more required levers are already active. Please reset the frame first.", Duration = 5 })
+                Messages.LeversActive()
                 return
             end
         end
@@ -318,13 +328,13 @@ local function executeRoute(routeKey, originName, platformName)
         for _, leverName in ipairs(leverSequence) do
             local success = pullLeverToState(frameDE, leverName, true)
             if not success then
-                Fluent:Notify({ Title = "Notice", Content = string.format("Failed to interact with %s. Sequence aborted.", leverName), Duration = 4 })
+                Messages.LeverFailed(leverName)
                 return
             end
             task_wait(math_random(4, 9) / 10)
         end
 
-        Fluent:Notify({ Title = "Routing Complete", Content = string.format("Dispatching train from %s to %s.", originName, platformName), Duration = 5 })
+        Messages.RoutingComplete(originName, platformName)
     end)
 end
 
@@ -392,14 +402,8 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 3",
     Description = "Routes incoming train from Dovedale Central to Platform 3.",
     Callback = function()
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
         executeRoute("Dovedale_Platform3", "Dovedale Central", "Platform 3") 
     end
 })
@@ -408,14 +412,8 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 5",
     Description = "Routes incoming train from Dovedale Central to Platform 5.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
         executeRoute("Dovedale_Platform5", "Dovedale Central", "Platform 5") 
     end
 })
@@ -424,14 +422,8 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 6",
     Description = "Routes incoming train from Dovedale Central to Platform 6.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
         executeRoute("Dovedale_Platform6", "Dovedale Central", "Platform 6") 
     end
 })
@@ -442,18 +434,9 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 2",
     Description = "Routes outgoing train from Platform 2 to Dovedale Central.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkDCClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Telegraph Block to Dovedale Central has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
+        if not checkDCClearance() then Messages.ClearanceDenied("Dovedale Central") return end
         executeRoute("Departure_Platform2_DC", "Platform 2", "Dovedale Central") 
     end
 })
@@ -462,18 +445,9 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 4",
     Description = "Routes outgoing train from Platform 4 to Dovedale Central.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkDCClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Telegraph Block to Dovedale Central has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
+        if not checkDCClearance() then Messages.ClearanceDenied("Dovedale Central") return end
         executeRoute("Departure_Platform4_DC", "Platform 4", "Dovedale Central") 
     end
 })
@@ -482,18 +456,9 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 6",
     Description = "Routes outgoing train from Platform 6 to Dovedale Central.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkDCClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Telegraph Block to Dovedale Central has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
+        if not checkDCClearance() then Messages.ClearanceDenied("Dovedale Central") return end
         executeRoute("Departure_Platform6_DC", "Platform 6", "Dovedale Central") 
     end
 })
@@ -504,10 +469,7 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 1",
     Description = "Routes incoming train from Satus to Platform 1.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
         executeRoute("Satus_Platform1", "Satus", "Platform 1") 
     end
 })
@@ -516,10 +478,7 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 2",
     Description = "Routes incoming train from Satus to Platform 2.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
         executeRoute("Satus_Platform2", "Satus", "Platform 2") 
     end
 })
@@ -528,10 +487,7 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 4",
     Description = "Routes incoming train from Satus to Platform 4.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
         executeRoute("Satus_Platform4", "Satus", "Platform 4") 
     end
 })
@@ -542,14 +498,8 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 1",
     Description = "Routes outgoing train from Platform 1 to Satus.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkSATClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Satus has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Satus") return end
         executeRoute("Departure_Platform1_SAT", "Platform 1", "Satus") 
     end
 })
@@ -558,14 +508,8 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 2",
     Description = "Routes outgoing train from Platform 2 to Satus.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkSATClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Satus has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Satus") return end
         executeRoute("Departure_Platform2_SAT", "Platform 2", "Satus") 
     end
 })
@@ -574,14 +518,8 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 3",
     Description = "Routes outgoing train from Platform 3 to Satus.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkSATClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Satus has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Satus") return end
         executeRoute("Departure_Platform3_SAT", "Platform 3", "Satus") 
     end
 })
@@ -590,14 +528,8 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 5",
     Description = "Routes outgoing train from Platform 5 to Satus.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkSATClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Satus has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Satus") return end
         executeRoute("Departure_Platform5_SAT", "Platform 5", "Satus") 
     end
 })
@@ -608,14 +540,8 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 2",
     Description = "Routes incoming train from Cosdale Harbour to Platform 2.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
         executeRoute("Cosdale_Platform2", "Cosdale Harbour", "Platform 2") 
     end
 })
@@ -624,14 +550,8 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 3",
     Description = "Routes incoming train from Cosdale Harbour to Platform 3.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
         executeRoute("Cosdale_Platform3", "Cosdale Harbour", "Platform 3") 
     end
 })
@@ -640,14 +560,8 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 5",
     Description = "Routes incoming train from Cosdale Harbour to Platform 5.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
         executeRoute("Cosdale_Platform5", "Cosdale Harbour", "Platform 5") 
     end
 })
@@ -656,14 +570,8 @@ Tabs.DE:AddButton({
     Title = "Route to Platform 6",
     Description = "Routes incoming train from Cosdale Harbour to Platform 6.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
         executeRoute("Cosdale_Platform6", "Cosdale Harbour", "Platform 6") 
     end
 })
@@ -674,18 +582,9 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 2",
     Description = "Routes outgoing train from Platform 2 to Cosdale Harbour.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkCHClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Cosdale Harbour has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
+        if not checkCHClearance() then Messages.ClearanceDenied("Cosdale Harbour") return end
         executeRoute("Departure_Platform2_CH", "Platform 2", "Cosdale Harbour") 
     end
 })
@@ -694,18 +593,9 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 4",
     Description = "Routes outgoing train from Platform 4 to Cosdale Harbour.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkCHClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Cosdale Harbour has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
+        if not checkCHClearance() then Messages.ClearanceDenied("Cosdale Harbour") return end
         executeRoute("Departure_Platform4_CH", "Platform 4", "Cosdale Harbour") 
     end
 })
@@ -714,18 +604,9 @@ Tabs.DE:AddButton({
     Title = "Dispatch Platform 6",
     Description = "Routes outgoing train from Platform 6 to Cosdale Harbour.",
     Callback = function() 
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not checkDECrossing() then
-            Fluent:Notify({ Title = "Crossing Unsecured", Content = "The Dovedale East Level Crossing has not been secured.", Duration = 4 })
-            return
-        end
-        if not checkCHClearance() then
-            Fluent:Notify({ Title = "Clearance Denied", Content = "The Tokenless Block to Cosdale Harbour has not been cleared.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkDECrossing() then Messages.CrossingUnsecured() return end
+        if not checkCHClearance() then Messages.ClearanceDenied("Cosdale Harbour") return end
         executeRoute("Departure_Platform6_CH", "Platform 6", "Cosdale Harbour") 
     end
 })
@@ -736,14 +617,8 @@ Tabs.DE:AddButton({
     Title = "Reset Lever Frame",
     Description = "Safely returns all active levers to default in strict interlocking order.",
     Callback = function()
-        if not isPlayerInsideBox() then
-            Fluent:Notify({ Title = "Position Required", Content = "You must return inside the signal box before interacting with the lever frame.", Duration = 4 })
-            return
-        end
-        if not isDovedaleActive then
-            Fluent:Notify({ Title = "Access Denied", Content = "You are not currently hosting the Dovedale East Box.", Duration = 4 })
-            return
-        end
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not isDovedaleActive then Messages.NotHosting("Dovedale East") return end
 
         task.spawn(function()
             local signalSystems = Workspace:FindFirstChild("Interlocking_Switches/Signals")
@@ -751,12 +626,12 @@ Tabs.DE:AddButton({
             local frameDE = leverFrames and leverFrames:FindFirstChild("DE")
 
             if not frameDE then
-                Fluent:Notify({ Title = "Error", Content = "The Dovedale East lever frame could not be located.", Duration = 4 })
+                Messages.NoFrame("Dovedale East")
                 return
             end
 
             if not InterlockingModule or not InterlockingModule.Boxes or not InterlockingModule.Boxes.DE.LeverConfig then
-                Fluent:Notify({ Title = "Error", Content = "Interlocking data failed to initialize.", Duration = 4 })
+                Messages.InterlockingError()
                 return
             end
 
@@ -786,7 +661,7 @@ Tabs.DE:AddButton({
                 task_wait(math_random(4, 9) / 10)
             end
 
-            Fluent:Notify({ Title = "Reset Complete", Content = "Levers reset successfully in interlocking order.", Duration = 4 })
+            Messages.ResetComplete()
         end)
     end
 })
