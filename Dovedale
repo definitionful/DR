@@ -10,9 +10,22 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.RightControl
 })
 
+-- 1. ADDED ALL TABS WITH FULL NAMES
 local Tabs = {
     Main = Window:AddTab({ Title = "Box Automation", Icon = "server" }),
-    DE = Window:AddTab({ Title = "Dovedale East", Icon = "git-merge" })
+    AB   = Window:AddTab({ Title = "Ashburn", Icon = "git-merge" }),
+    BL   = Window:AddTab({ Title = "Benyhone Loop", Icon = "git-merge" }),
+    FM   = Window:AddTab({ Title = "Fanory Mill", Icon = "git-merge" }),
+    SAT  = Window:AddTab({ Title = "Satus", Icon = "git-merge" }),
+    DE   = Window:AddTab({ Title = "Dovedale East", Icon = "git-merge" }),
+    CH   = Window:AddTab({ Title = "Cosdale Harbour", Icon = "git-merge" }),
+    DC   = Window:AddTab({ Title = "Dovedale Central", Icon = "git-merge" }),
+    GE   = Window:AddTab({ Title = "Gleethrop End", Icon = "git-merge" }),
+    MW   = Window:AddTab({ Title = "Mazewood", Icon = "git-merge" }),
+    MC   = Window:AddTab({ Title = "Marigot Crossing", Icon = "git-merge" }),
+    CC   = Window:AddTab({ Title = "Codsall Castle", Icon = "git-merge" }),
+    GJ   = Window:AddTab({ Title = "Glassbury Junction", Icon = "git-merge" }),
+    MS   = Window:AddTab({ Title = "Masonfield", Icon = "git-merge" })
 }
 
 local Players = game:GetService("Players")
@@ -241,6 +254,9 @@ local function pullLeverToState(frameDE, leverName, targetState)
     return false
 end
 
+-- 2. ADDED LEVER LOCKS SYSTEM
+local LeverLocks = {} -- Tracks levers currently in animation
+
 local function executeRoute(routeKey, originName, platformName)
     if not isDovedaleActive then
         Fluent:Notify({ Title = "Access Denied", Content = "You are not currently hosting the Dovedale East Box.", Duration = 4 })
@@ -258,13 +274,27 @@ local function executeRoute(routeKey, originName, platformName)
         return
     end
 
+    -- Check if any of the required levers are currently locked by a previous action
+    for _, name in ipairs(routeData.RequiredLevers) do
+        if LeverLocks[name] then
+            Fluent:Notify({ Title = "Please Wait", Content = "Levers for this route (" .. name .. ") are currently in motion.", Duration = 3 })
+            return
+        end
+    end
+
     task.spawn(function()
+        -- Lock the required levers before starting
+        for _, name in ipairs(routeData.RequiredLevers) do
+            LeverLocks[name] = true
+        end
+
         local signalSystems = Workspace:FindFirstChild("Interlocking_Switches/Signals")
         local leverFrames = signalSystems and signalSystems:FindFirstChild("Leverframes")
         local frameDE = leverFrames and leverFrames:FindFirstChild("DE")
 
         if not frameDE then
             Fluent:Notify({ Title = "Error", Content = "The Dovedale East lever frame could not be located.", Duration = 4 })
+            for _, name in ipairs(routeData.RequiredLevers) do LeverLocks[name] = false end
             return
         end
 
@@ -274,6 +304,7 @@ local function executeRoute(routeKey, originName, platformName)
             
             if not pulled or pulled.Value == true then
                 Fluent:Notify({ Title = "Notice", Content = "One or more required levers are already active. Please reset the frame first.", Duration = 5 })
+                for _, lockName in ipairs(routeData.RequiredLevers) do LeverLocks[lockName] = false end
                 return
             end
         end
@@ -296,12 +327,21 @@ local function executeRoute(routeKey, originName, platformName)
             local success = pullLeverToState(frameDE, leverName, true)
             if not success then
                 Fluent:Notify({ Title = "Notice", Content = string.format("Failed to interact with %s. Sequence aborted.", leverName), Duration = 4 })
+                -- Make sure to unlock on failure
+                for _, name in ipairs(routeData.RequiredLevers) do LeverLocks[name] = false end
                 return
             end
             task_wait(math_random(4, 9) / 10)
         end
 
         Fluent:Notify({ Title = "Routing Complete", Content = string.format("Dispatching train from %s to %s.", originName, platformName), Duration = 5 })
+
+        -- Wait an additional human-reasonable delay before unlocking the levers
+        task_wait(2)
+        
+        for _, name in ipairs(routeData.RequiredLevers) do
+            LeverLocks[name] = false
+        end
     end)
 end
 
@@ -644,18 +684,33 @@ Tabs.DE:AddButton({
             return
         end
 
+        -- Check if any levers are currently active/in transit to prevent resetting during routing
+        for _, isLocked in pairs(LeverLocks) do
+            if isLocked then
+                Fluent:Notify({ Title = "Please Wait", Content = "Routes are currently being set. Cannot reset frame.", Duration = 4 })
+                return
+            end
+        end
+
         task.spawn(function()
+            -- Lock all 49 potential Dovedale East levers to prevent routing commands during the reset
+            for i = 1, 49 do
+                LeverLocks[string.format("DE_%02d", i)] = true
+            end
+
             local signalSystems = Workspace:FindFirstChild("Interlocking_Switches/Signals")
             local leverFrames = signalSystems and signalSystems:FindFirstChild("Leverframes")
             local frameDE = leverFrames and leverFrames:FindFirstChild("DE")
 
             if not frameDE then
                 Fluent:Notify({ Title = "Error", Content = "The Dovedale East lever frame could not be located.", Duration = 4 })
+                for i = 1, 49 do LeverLocks[string.format("DE_%02d", i)] = false end
                 return
             end
 
             if not InterlockingModule or not InterlockingModule.Boxes or not InterlockingModule.Boxes.DE.LeverConfig then
                 Fluent:Notify({ Title = "Error", Content = "Interlocking data failed to initialize.", Duration = 4 })
+                for i = 1, 49 do LeverLocks[string.format("DE_%02d", i)] = false end
                 return
             end
 
@@ -686,6 +741,13 @@ Tabs.DE:AddButton({
             end
 
             Fluent:Notify({ Title = "Reset Complete", Content = "Levers reset successfully in interlocking order.", Duration = 4 })
+            
+            -- Human-reasonable delay before the frame is unlocked again
+            task_wait(2)
+            
+            for i = 1, 49 do
+                LeverLocks[string.format("DE_%02d", i)] = false
+            end
         end)
     end
 })
