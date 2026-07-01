@@ -65,6 +65,41 @@ local InterlockingData = {
                 ["Departure_Platform4_CH"] = { RequiredLevers = {"DE_12", "DE_17", "DE_19", "DE_34", "DE_39"}, Sequence = {{Group = {"DE_19"}}, {Group = {"DE_17"}}, {Group = {"DE_12"}}, {Group = {"DE_39", "DE_34"}}} },
                 ["Departure_Platform6_CH"] = { RequiredLevers = {"DE_12", "DE_14", "DE_15", "DE_19", "DE_21", "DE_34", "DE_38"}, Sequence = {{Group = {"DE_12", "DE_15"}}, {Group = {"DE_19"}}, {Group = {"DE_21"}}, {Group = {"DE_14"}}, {Group = {"DE_38", "DE_34"}}} }
             }
+        },
+        ["SAT"] = {
+            DefaultPriority = 5,
+            LeverConfig = {
+                ["SAT_01"] = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
+                ["SAT_02"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT02" },
+                ["SAT_03"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT03" },
+                ["SAT_04"] = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
+                ["SAT_05"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT05" },
+                ["SAT_06"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT06" },
+                ["SAT_07"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT07" },
+                ["SAT_08"] = { Type = "FPL", ResetPriority = 3, Color = "Blue" },
+                ["SAT_09"] = { Type = "Points", ResetPriority = 4, Color = "Black" },
+                ["SAT_10"] = { Type = "FPL", ResetPriority = 3, Color = "Blue" },
+                ["SAT_11"] = { Type = "Points", ResetPriority = 4, Color = "Black" },
+                ["SAT_12"] = { Type = "Points", ResetPriority = 4, Color = "Black" },
+                ["SAT_14"] = { Type = "Points", ResetPriority = 4, Color = "Black" },
+                ["SAT_15"] = { Type = "Combined Points/FPL", ResetPriority = 4, Color = "Blue over Black" },
+                ["SAT_16"] = { Type = "Spare FPL", ResetPriority = 3, Color = "White over Blue" },
+                ["SAT_17"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT17" },
+                ["SAT_19"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT19" },
+                ["SAT_20"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT20" },
+                ["SAT_24"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT24" },
+                ["SAT_25"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT25" },
+                ["SAT_26"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" },
+                ["SAT_27"] = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
+                ["SAT_28"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red", ReleaseName = "electricRelease_SAT28" },
+                ["SAT_29"] = { Type = "Stop/Shunt", ResetPriority = 2, Color = "Red" },
+                ["SAT_30"] = { Type = "Distant", ResetPriority = 1, Color = "Yellow" },
+            },
+            Routes = {
+                ["Siding1_DE"] = { RequiredLevers = {"SAT_11", "SAT_12", "SAT_20"}, Sequence = {{Group = {"SAT_11", "SAT_12"}}, {Group = {"SAT_20"}}} },
+                ["Siding2_DE"] = { RequiredLevers = {"SAT_11", "SAT_12", "SAT_14", "SAT_19"}, Sequence = {{Group = {"SAT_11", "SAT_12", "SAT_14"}}, {Group = {"SAT_19"}}} },
+                ["Siding3_DE"] = { RequiredLevers = {"SAT_11", "SAT_17"}, Sequence = {{Group = {"SAT_11"}}, {Group = {"SAT_17"}}} },
+            }
         }
     }
 }
