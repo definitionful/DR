@@ -1,21 +1,15 @@
 local Notifications = {}
 local FluentUI = nil
 
--- Initializes the module with the Fluent instance so it can push notifications
 function Notifications.Init(fluentInstance)
     FluentUI = fluentInstance
 end
 
--- Base helper function
 local function sendMsg(title, content, duration)
     if FluentUI then
         FluentUI:Notify({ Title = title, Content = content, Duration = duration or 4 })
     end
 end
-
--- ==========================================
--- Notification Methods
--- ==========================================
 
 function Notifications.MenuWarning() 
     sendMsg("Notice", "Please exit the menu before activating this feature.", 4) 
@@ -45,12 +39,15 @@ function Notifications.PositionRequired()
     sendMsg("Position Required", "You must return inside the signal box before interacting with the lever frame.", 4) 
 end
 
-function Notifications.CrossingUnsecured() 
-    sendMsg("Crossing Unsecured", "The Dovedale East Level Crossing has not been secured.", 4) 
+function Notifications.CrossingUnsecured(crossingName)
+    if not crossingName then
+        sendMsg("Error", "Level crossing data not found", 4)
+        return
+    end
+    sendMsg("Crossing Unsecured", string.format("The %s Level Crossing must be secured before routing.", crossingName), 4) 
 end
 
 function Notifications.ClearanceDenied(destination)
-    -- Dynamically changes block type based on the location
     local blockType = destination == "Dovedale Central" and "Telegraph" or "Tokenless"
     sendMsg("Clearance Denied", string.format("The %s Block to %s has not been cleared.", blockType, destination), 4)
 end
@@ -64,7 +61,7 @@ function Notifications.DataMissing()
 end
 
 function Notifications.RouteNotFound(route) 
-    sendMsg("Error", "Route data not found for: " .. tostring(route), 4) 
+    sendMsg("Error", "Route data not found for " .. tostring(route), 4) 
 end
 
 function Notifications.NoFrame(frameName) 
@@ -91,12 +88,20 @@ function Notifications.ResetComplete()
     sendMsg("Reset Complete", "Levers reset successfully in interlocking order.", 4) 
 end
 
-function Notifications.CrossingRaised() 
-    sendMsg("Crossing Raised", "The Dovedale East Level Crossing has been opened to road traffic.", 4) 
+function Notifications.CrossingRaised(crossingName)
+    if not crossingName then
+        sendMsg("Error", "Level crossing data not found", 4)
+        return
+    end
+    sendMsg("Crossing Raised", string.format("The %s Level Crossing is now open to road traffic.", crossingName), 4) 
 end
 
-function Notifications.CrossingLowered() 
-    sendMsg("Crossing Secured", "The Dovedale East Level Crossing has been lowered and secured.", 4) 
+function Notifications.CrossingLowered(crossingName) 
+    if not crossingName then
+        sendMsg("Error", "Level crossing data not found", 4)
+        return
+    end
+    sendMsg("Crossing Secured", string.format("The %s Level Crossing is now secured for trains.", crossingName), 4) 
 end
 
 return Notifications
