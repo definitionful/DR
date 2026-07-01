@@ -20,7 +20,8 @@ local Window = Fluent:CreateWindow({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Box Automation", Icon = "server" }),
-    DE = Window:AddTab({ Title = "Dovedale East", Icon = "git-merge" })
+    DE = Window:AddTab({ Title = "Dovedale East", Icon = "git-merge" }),
+    SAT = Window:AddTab({ Title = "Satus", Icon = "git-merge" })
 }
 
 local Players = game:GetService("Players")
@@ -78,6 +79,7 @@ local function getLiteralBoxData(id)
 end
 
 local isDovedaleActive = false
+local isSatusActive = false
 
 task.spawn(function()
     while task_wait(1) do
@@ -87,12 +89,20 @@ task.spawn(function()
             local header = manageBox and manageBox:FindFirstChild("Header")
             local title = header and header:FindFirstChild("Title")
             
-            if title and title.Text == "DE Box" then
-                isDovedaleActive = true
-                continue
+            if title then
+                if title.Text == "DE Box" then
+                    isDovedaleActive = true
+                    isSatusActive = false
+                    continue
+                elseif title.Text == "SAT Box" then
+                    isSatusActive = true
+                    isDovedaleActive = false
+                    continue
+                end
             end
         end
         isDovedaleActive = false
+        isSatusActive = false
     end
 end)
 
@@ -226,8 +236,8 @@ BoxToggle:OnChanged(function(State)
     end)
 end)
 
-local function pullLeverToState(frameDE, leverName, targetState)
-    local lever = frameDE:FindFirstChild(leverName)
+local function pullLeverToState(frame, leverName, targetState, boxID)
+    local lever = frame:FindFirstChild(leverName)
     if not lever then return false end
 
     local valuesFolder = lever:FindFirstChild("Values")
@@ -237,10 +247,10 @@ local function pullLeverToState(frameDE, leverName, targetState)
     if pulled and clickDetector then
         if pulled.Value ~= targetState then
             
-            if targetState == true and InterlockingModule and InterlockingModule.Boxes and InterlockingModule.Boxes.DE.LeverConfig then
-                local config = InterlockingModule.Boxes.DE.LeverConfig[leverName]
+            if targetState == true and InterlockingModule and InterlockingModule.Boxes and InterlockingModule.Boxes[boxID].LeverConfig then
+                local config = InterlockingModule.Boxes[boxID].LeverConfig[leverName]
                 if config and config.ReleaseName then
-                    local releaseNode = frameDE:FindFirstChild(config.ReleaseName)
+                    local releaseNode = frame:FindFirstChild(config.ReleaseName)
                     if releaseNode then
                         local releaseValues = releaseNode:FindFirstChild("Values")
                         local isPressed = releaseValues and releaseValues:FindFirstChild("Pressed")
@@ -272,20 +282,23 @@ local function pullLeverToState(frameDE, leverName, targetState)
     return false
 end
 
-local function executeRoute(routeKey, originName, platformName)
+local function executeRoute(boxID, routeKey, originName, platformName)
     if not Messages then return end
 
-    if not isDovedaleActive then
+    if boxID == "DE" and not isDovedaleActive then
         Messages.NotHosting("Dovedale East")
+        return
+    elseif boxID == "SAT" and not isSatusActive then
+        Messages.NotHosting("Satus")
         return
     end
 
-    if not InterlockingModule or not InterlockingModule.Boxes or not InterlockingModule.Boxes.DE.Routes then
+    if not InterlockingModule or not InterlockingModule.Boxes or not InterlockingModule.Boxes[boxID].Routes then
         Messages.DataMissing()
         return
     end
 
-    local routeData = InterlockingModule.Boxes.DE.Routes[routeKey]
+    local routeData = InterlockingModule.Boxes[boxID].Routes[routeKey]
     if not routeData then
         Messages.RouteNotFound(routeKey)
         return
@@ -294,15 +307,15 @@ local function executeRoute(routeKey, originName, platformName)
     task.spawn(function()
         local signalSystems = Workspace:FindFirstChild("Interlocking_Switches/Signals")
         local leverFrames = signalSystems and signalSystems:FindFirstChild("Leverframes")
-        local frameDE = leverFrames and leverFrames:FindFirstChild("DE")
+        local frame = leverFrames and leverFrames:FindFirstChild(boxID)
 
-        if not frameDE then
-            Messages.NoFrame("Dovedale East")
+        if not frame then
+            Messages.NoFrame(boxID == "DE" and "Dovedale East" or "Satus")
             return
         end
 
         for _, name in ipairs(routeData.RequiredLevers) do
-            local lever = frameDE:FindFirstChild(name)
+            local lever = frame:FindFirstChild(name)
             local pulled = lever and lever:FindFirstChild("Values") and lever.Values:FindFirstChild("Pulled")
             
             if not pulled or pulled.Value == true then
@@ -314,19 +327,14 @@ local function executeRoute(routeKey, originName, platformName)
         local leverSequence = {}
         for _, step in ipairs(routeData.Sequence) do
             if step.Group then
-                local shuffled = {unpack(step.Group)}
-                for i = #shuffled, 2, -1 do
-                    local j = math_random(i)
-                    shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
-                end
-                for _, leverName in ipairs(shuffled) do
+                for _, leverName in ipairs(step.Group) do
                     table.insert(leverSequence, leverName)
                 end
             end
         end
 
         for _, leverName in ipairs(leverSequence) do
-            local success = pullLeverToState(frameDE, leverName, true)
+            local success = pullLeverToState(frame, leverName, true, boxID)
             if not success then
                 Messages.LeverFailed(leverName)
                 return
@@ -340,6 +348,19 @@ end
 
 local function checkDECrossing()
     local crossing = Workspace:FindFirstChild("DECrossing")
+    if not crossing then return false end
+    
+    local active = crossing:FindFirstChild("Active")
+    local free = crossing:FindFirstChild("Free")
+    
+    if active and free and active.Value == true and free.Value == true then
+        return true
+    end
+    return false
+end
+
+local function checkSATCrossing()
+    local crossing = Workspace:FindFirstChild("SATCrossing")
     if not crossing then return false end
     
     local active = crossing:FindFirstChild("Active")
@@ -396,6 +417,10 @@ local function checkCHClearance()
     return false
 end
 
+-- ==========================================
+-- Dovedale East Control Tab
+-- ==========================================
+
 Tabs.DE:AddSection("Arrivals from Dovedale Central")
 
 Tabs.DE:AddButton({
@@ -404,7 +429,7 @@ Tabs.DE:AddButton({
     Callback = function()
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Dovedale_Platform3", "Dovedale Central", "Platform 3") 
+        executeRoute("DE", "Dovedale_Platform3", "Dovedale Central", "Platform 3") 
     end
 })
 
@@ -414,7 +439,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Dovedale_Platform5", "Dovedale Central", "Platform 5") 
+        executeRoute("DE", "Dovedale_Platform5", "Dovedale Central", "Platform 5") 
     end
 })
 
@@ -424,7 +449,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Dovedale_Platform6", "Dovedale Central", "Platform 6") 
+        executeRoute("DE", "Dovedale_Platform6", "Dovedale Central", "Platform 6") 
     end
 })
 
@@ -437,7 +462,7 @@ Tabs.DE:AddButton({
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDCClearance() then Messages.ClearanceDenied("Dovedale Central") return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Departure_Platform2_DC", "Platform 2", "Dovedale Central") 
+        executeRoute("DE", "Departure_Platform2_DC", "Platform 2", "Dovedale Central") 
     end
 })
 
@@ -448,7 +473,7 @@ Tabs.DE:AddButton({
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDCClearance() then Messages.ClearanceDenied("Dovedale Central") return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Departure_Platform4_DC", "Platform 4", "Dovedale Central") 
+        executeRoute("DE", "Departure_Platform4_DC", "Platform 4", "Dovedale Central") 
     end
 })
 
@@ -459,7 +484,7 @@ Tabs.DE:AddButton({
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDCClearance() then Messages.ClearanceDenied("Dovedale Central") return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Departure_Platform6_DC", "Platform 6", "Dovedale Central") 
+        executeRoute("DE", "Departure_Platform6_DC", "Platform 6", "Dovedale Central") 
     end
 })
 
@@ -470,7 +495,7 @@ Tabs.DE:AddButton({
     Description = "Routes incoming train from Satus to Platform 1.",
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
-        executeRoute("Satus_Platform1", "Satus", "Platform 1") 
+        executeRoute("DE", "Satus_Platform1", "Satus", "Platform 1") 
     end
 })
 
@@ -479,7 +504,7 @@ Tabs.DE:AddButton({
     Description = "Routes incoming train from Satus to Platform 2.",
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
-        executeRoute("Satus_Platform2", "Satus", "Platform 2") 
+        executeRoute("DE", "Satus_Platform2", "Satus", "Platform 2") 
     end
 })
 
@@ -488,7 +513,7 @@ Tabs.DE:AddButton({
     Description = "Routes incoming train from Satus to Platform 4.",
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
-        executeRoute("Satus_Platform4", "Satus", "Platform 4") 
+        executeRoute("DE", "Satus_Platform4", "Satus", "Platform 4") 
     end
 })
 
@@ -500,7 +525,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkSATClearance() then Messages.ClearanceDenied("Satus") return end
-        executeRoute("Departure_Platform1_SAT", "Platform 1", "Satus") 
+        executeRoute("DE", "Departure_Platform1_SAT", "Platform 1", "Satus") 
     end
 })
 
@@ -510,7 +535,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkSATClearance() then Messages.ClearanceDenied("Satus") return end
-        executeRoute("Departure_Platform2_SAT", "Platform 2", "Satus") 
+        executeRoute("DE", "Departure_Platform2_SAT", "Platform 2", "Satus") 
     end
 })
 
@@ -520,7 +545,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkSATClearance() then Messages.ClearanceDenied("Satus") return end
-        executeRoute("Departure_Platform3_SAT", "Platform 3", "Satus") 
+        executeRoute("DE", "Departure_Platform3_SAT", "Platform 3", "Satus") 
     end
 })
 
@@ -530,7 +555,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkSATClearance() then Messages.ClearanceDenied("Satus") return end
-        executeRoute("Departure_Platform5_SAT", "Platform 5", "Satus") 
+        executeRoute("DE", "Departure_Platform5_SAT", "Platform 5", "Satus") 
     end
 })
 
@@ -542,7 +567,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Cosdale_Platform2", "Cosdale Harbour", "Platform 2") 
+        executeRoute("DE", "Cosdale_Platform2", "Cosdale Harbour", "Platform 2") 
     end
 })
 
@@ -552,7 +577,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Cosdale_Platform3", "Cosdale Harbour", "Platform 3") 
+        executeRoute("DE", "Cosdale_Platform3", "Cosdale Harbour", "Platform 3") 
     end
 })
 
@@ -562,7 +587,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Cosdale_Platform5", "Cosdale Harbour", "Platform 5") 
+        executeRoute("DE", "Cosdale_Platform5", "Cosdale Harbour", "Platform 5") 
     end
 })
 
@@ -572,7 +597,7 @@ Tabs.DE:AddButton({
     Callback = function() 
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Cosdale_Platform6", "Cosdale Harbour", "Platform 6") 
+        executeRoute("DE", "Cosdale_Platform6", "Cosdale Harbour", "Platform 6") 
     end
 })
 
@@ -585,7 +610,7 @@ Tabs.DE:AddButton({
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkCHClearance() then Messages.ClearanceDenied("Cosdale Harbour") return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Departure_Platform2_CH", "Platform 2", "Cosdale Harbour") 
+        executeRoute("DE", "Departure_Platform2_CH", "Platform 2", "Cosdale Harbour") 
     end
 })
 
@@ -596,7 +621,7 @@ Tabs.DE:AddButton({
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkCHClearance() then Messages.ClearanceDenied("Cosdale Harbour") return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Departure_Platform4_CH", "Platform 4", "Cosdale Harbour") 
+        executeRoute("DE", "Departure_Platform4_CH", "Platform 4", "Cosdale Harbour") 
     end
 })
 
@@ -607,7 +632,7 @@ Tabs.DE:AddButton({
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
         if not checkCHClearance() then Messages.ClearanceDenied("Cosdale Harbour") return end
         if not checkDECrossing() then Messages.CrossingUnsecured() return end
-        executeRoute("Departure_Platform6_CH", "Platform 6", "Cosdale Harbour") 
+        executeRoute("DE", "Departure_Platform6_CH", "Platform 6", "Cosdale Harbour") 
     end
 })
 
@@ -631,17 +656,15 @@ Tabs.DE:AddButton({
             
             if not (active and free and working) then return end
 
-            -- If the crossing is secured for trains (Active=true, Free=true), RAISE it for cars.
             if active.Value == true and free.Value == true then
                 local raiseBtn = working:FindFirstChild("ButtonRaise")
                 local clickPart = raiseBtn and raiseBtn:FindFirstChild("ClickPart")
                 local detector = clickPart and clickPart:FindFirstChildOfClass("ClickDetector")
                 
                 if detector then
-                    task_wait(math_random(4, 9) / 10) -- Reasonable human delay
+                    task_wait(math_random(4, 9) / 10) 
                     fireclickdetector(detector)
                     
-                    -- Wait for the state to transition to False/False
                     local timeout = os_clock() + 15
                     while (active.Value == true or free.Value == true) and os_clock() < timeout do
                         task_wait(0.1)
@@ -651,18 +674,15 @@ Tabs.DE:AddButton({
                         if Messages.CrossingRaised then Messages.CrossingRaised() end
                     end
                 end
-
-            -- If the crossing is open for cars (Active=false, Free=false), LOWER it for trains.
             elseif active.Value == false and free.Value == false then
                 local lowerBtn = working:FindFirstChild("ButtonLower")
                 local clickPart = lowerBtn and lowerBtn:FindFirstChild("ClickPart")
                 local detector = clickPart and clickPart:FindFirstChildOfClass("ClickDetector")
                 
                 if detector then
-                    task_wait(math_random(4, 9) / 10) -- Reasonable human delay
+                    task_wait(math_random(4, 9) / 10)
                     fireclickdetector(detector)
                     
-                    -- Wait for the state to transition to True/True
                     local timeout = os_clock() + 15
                     while (active.Value == false or free.Value == false) and os_clock() < timeout do
                         task_wait(0.1)
@@ -687,9 +707,9 @@ Tabs.DE:AddButton({
         task.spawn(function()
             local signalSystems = Workspace:FindFirstChild("Interlocking_Switches/Signals")
             local leverFrames = signalSystems and signalSystems:FindFirstChild("Leverframes")
-            local frameDE = leverFrames and leverFrames:FindFirstChild("DE")
+            local frame = leverFrames and leverFrames:FindFirstChild("DE")
 
-            if not frameDE then
+            if not frame then
                 Messages.NoFrame("Dovedale East")
                 return
             end
@@ -702,7 +722,7 @@ Tabs.DE:AddButton({
             local activeLevers = {}
             for i = 1, 49 do
                 local leverName = string.format("DE_%02d", i)
-                local lever = frameDE:FindFirstChild(leverName)
+                local lever = frame:FindFirstChild(leverName)
                 
                 if lever then
                     local pulled = lever:FindFirstChild("Values") and lever.Values:FindFirstChild("Pulled")
@@ -720,8 +740,160 @@ Tabs.DE:AddButton({
             end)
 
             for _, data in ipairs(activeLevers) do
-                print(string.format("Resetting: %s | Assumed Priority: %s", data.Name, tostring(data.Priority)))
-                pullLeverToState(frameDE, data.Name, false)
+                pullLeverToState(frame, data.Name, false, "DE")
+                task_wait(math_random(4, 9) / 10)
+            end
+
+            Messages.ResetComplete()
+        end)
+    end
+})
+
+-- ==========================================
+-- Satus Control Tab
+-- ==========================================
+
+Tabs.SAT:AddSection("Departures to Dovedale East")
+
+Tabs.SAT:AddButton({
+    Title = "Route Siding No.1",
+    Description = "Routes outgoing train from Siding No.1 to Dovedale East.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Dovedale East") return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured() return end
+        executeRoute("SAT", "Siding1_DE", "Siding No.1", "Dovedale East")
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Route Siding No.2",
+    Description = "Routes outgoing train from Siding No.2 to Dovedale East.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Dovedale East") return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured() return end
+        executeRoute("SAT", "Siding2_DE", "Siding No.2", "Dovedale East")
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Route Siding No.3",
+    Description = "Routes outgoing train from Siding No.3 to Dovedale East.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Dovedale East") return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured() return end
+        executeRoute("SAT", "Siding3_DE", "Siding No.3", "Dovedale East")
+    end
+})
+
+Tabs.SAT:AddSection("Frame & Crossing Control")
+
+Tabs.SAT:AddButton({
+    Title = "Operate Level Crossing",
+    Description = "Raises or lowers the level crossing based on its current state.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not isSatusActive then Messages.NotHosting("Satus") return end
+
+        task.spawn(function()
+            local crossing = Workspace:FindFirstChild("SATCrossing")
+            if not crossing then return end
+            
+            local active = crossing:FindFirstChild("Active")
+            local free = crossing:FindFirstChild("Free")
+            local controller = crossing:FindFirstChild("CrossingController")
+            local working = controller and controller:FindFirstChild("Working")
+            
+            if not (active and free and working) then return end
+
+            if active.Value == true and free.Value == true then
+                local raiseBtn = working:FindFirstChild("ButtonRaise")
+                local clickPart = raiseBtn and raiseBtn:FindFirstChild("ClickPart")
+                local detector = clickPart and clickPart:FindFirstChildOfClass("ClickDetector")
+                
+                if detector then
+                    task_wait(math_random(4, 9) / 10)
+                    fireclickdetector(detector)
+                    
+                    local timeout = os_clock() + 15
+                    while (active.Value == true or free.Value == true) and os_clock() < timeout do
+                        task_wait(0.1)
+                    end
+                    
+                    if active.Value == false and free.Value == false then
+                        if Messages.CrossingRaised then Messages.CrossingRaised() end
+                    end
+                end
+
+            elseif active.Value == false and free.Value == false then
+                local lowerBtn = working:FindFirstChild("ButtonLower")
+                local clickPart = lowerBtn and lowerBtn:FindFirstChild("ClickPart")
+                local detector = clickPart and clickPart:FindFirstChildOfClass("ClickDetector")
+                
+                if detector then
+                    task_wait(math_random(4, 9) / 10)
+                    fireclickdetector(detector)
+                    
+                    local timeout = os_clock() + 15
+                    while (active.Value == false or free.Value == false) and os_clock() < timeout do
+                        task_wait(0.1)
+                    end
+                    
+                    if active.Value == true and free.Value == true then
+                        if Messages.CrossingLowered then Messages.CrossingLowered() end
+                    end
+                end
+            end
+        end)
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Reset Lever Frame",
+    Description = "Safely returns all active levers to default in strict interlocking order.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not isSatusActive then Messages.NotHosting("Satus") return end
+
+        task.spawn(function()
+            local signalSystems = Workspace:FindFirstChild("Interlocking_Switches/Signals")
+            local leverFrames = signalSystems and signalSystems:FindFirstChild("Leverframes")
+            local frame = leverFrames and leverFrames:FindFirstChild("SAT")
+
+            if not frame then
+                Messages.NoFrame("Satus")
+                return
+            end
+
+            if not InterlockingModule or not InterlockingModule.Boxes or not InterlockingModule.Boxes.SAT.LeverConfig then
+                Messages.InterlockingError()
+                return
+            end
+
+            local activeLevers = {}
+            for i = 1, 30 do
+                local leverName = string.format("SAT_%02d", i)
+                local lever = frame:FindFirstChild(leverName)
+                
+                if lever then
+                    local pulled = lever:FindFirstChild("Values") and lever.Values:FindFirstChild("Pulled")
+                    if pulled and pulled.Value == true then
+                        local leverData = InterlockingModule.Boxes.SAT.LeverConfig[leverName]
+                        local priority = leverData and leverData.ResetPriority or (InterlockingModule.Boxes.SAT.DefaultPriority or 5)
+                        
+                        table.insert(activeLevers, { Name = leverName, Priority = priority })
+                    end
+                end
+            end
+
+            table.sort(activeLevers, function(a, b)
+                return a.Priority < b.Priority
+            end)
+
+            for _, data in ipairs(activeLevers) do
+                pullLeverToState(frame, data.Name, false, "SAT")
                 task_wait(math_random(4, 9) / 10)
             end
 
