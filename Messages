@@ -12,11 +12,11 @@ local function sendMsg(title, content, duration)
 end
 
 function Notifications.MenuWarning() 
-    sendMsg("Notice", "Please exit the menu before activating this feature.", 4) 
+    sendMsg("Notice", "Please exit the menu prior to enabling this feature.", 4) 
 end
 
 function Notifications.SelectLocation() 
-    sendMsg("Notice", "Please select at least one location from the dropdown first.", 4) 
+    sendMsg("Notice", "Please select at least one location from the dropdown menu.", 4) 
 end
 
 function Notifications.AlreadyHosting() 
@@ -24,7 +24,7 @@ function Notifications.AlreadyHosting()
 end
 
 function Notifications.XPTooLow() 
-    sendMsg("Notice", "Your XP does not meet the requirements for any of the selected signal boxes.", 5) 
+    sendMsg("Notice", "Your experience level does not meet the requirements for the selected signal boxes.", 5) 
 end
 
 function Notifications.Assigning(boxName) 
@@ -32,36 +32,36 @@ function Notifications.Assigning(boxName)
 end
 
 function Notifications.AssignSuccess(boxName) 
-    sendMsg("Success", string.format("Successfully assigned to the %s Signal Box!", boxName), 4) 
+    sendMsg("Success", string.format("Successfully assigned to the %s Signal Box.", boxName), 4) 
 end
 
 function Notifications.PositionRequired() 
-    sendMsg("Position Required", "You must return inside the signal box before interacting with the lever frame.", 4) 
+    sendMsg("Position Required", "You must be inside the signal box to interact with the lever frame.", 4) 
 end
 
 function Notifications.CrossingUnsecured(crossingName)
     if not crossingName then
-        sendMsg("Error", "Level crossing data not found", 4)
+        sendMsg("Error", "The level crossing data could not be located.", 4)
         return
     end
-    sendMsg("Crossing Unsecured", string.format("The %s Level Crossing must be secured before routing.", crossingName), 4) 
+    sendMsg("Crossing Unsecured", string.format("The %s Level Crossing must be secured prior to routing.", crossingName), 4) 
 end
 
 function Notifications.ClearanceDenied(destination)
     local blockType = destination == "Dovedale Central" and "Telegraph" or "Tokenless"
-    sendMsg("Clearance Denied", string.format("The %s Block to %s has not been cleared.", blockType, destination), 4)
+    sendMsg("Clearance Denied", string.format("The %s block to %s has not been cleared.", blockType, destination), 4)
 end
 
 function Notifications.NotHosting(boxName) 
-    sendMsg("Access Denied", string.format("You are not currently hosting the %s Box.", boxName), 4) 
+    sendMsg("Access Denied", string.format("You are not currently hosting the %s Signal Box.", boxName), 4) 
 end
 
 function Notifications.DataMissing() 
-    sendMsg("Data Missing", "Route module failed to initialize. Try re-executing.", 5) 
+    sendMsg("Data Missing", "The route module failed to initialize. Please re-execute the script.", 5) 
 end
 
 function Notifications.RouteNotFound(route) 
-    sendMsg("Error", "Route data not found for " .. tostring(route), 4) 
+    sendMsg("Error", string.format("The route data could not be found for %s.", tostring(route)), 4) 
 end
 
 function Notifications.NoFrame(frameName) 
@@ -69,28 +69,28 @@ function Notifications.NoFrame(frameName)
 end
 
 function Notifications.LeversActive() 
-    sendMsg("Notice", "One or more required levers are already active. Please reset the frame first.", 5) 
+    sendMsg("Notice", "One or more required levers are currently active. Please reset the frame prior to routing.", 5) 
 end
 
 function Notifications.LeverFailed(lever) 
-    sendMsg("Notice", string.format("Failed to interact with %s. Sequence aborted.", lever), 4) 
+    sendMsg("Notice", string.format("Failed to interact with lever %s. The routing sequence has been aborted.", lever), 4) 
 end
 
 function Notifications.RoutingComplete(origin, dest) 
-    sendMsg("Routing Complete", string.format("Dispatching train from %s to %s.", origin, dest), 5) 
+    sendMsg("Routing Complete", string.format("Routing sequence complete. Dispatched train from %s to %s.", origin, dest), 5) 
 end
 
 function Notifications.InterlockingError() 
-    sendMsg("Error", "Interlocking data failed to initialize.", 4) 
+    sendMsg("Error", "The interlocking data failed to initialize.", 4) 
 end
 
 function Notifications.ResetComplete() 
-    sendMsg("Reset Complete", "Levers reset successfully in interlocking order.", 4) 
+    sendMsg("Reset Complete", "The lever frame has been successfully reset in interlocking sequence.", 4) 
 end
 
 function Notifications.CrossingRaised(crossingName)
     if not crossingName then
-        sendMsg("Error", "Level crossing data not found", 4)
+        sendMsg("Error", "The level crossing data could not be located.", 4)
         return
     end
     sendMsg("Crossing Raised", string.format("The %s Level Crossing is now open to road traffic.", crossingName), 4) 
@@ -98,10 +98,10 @@ end
 
 function Notifications.CrossingLowered(crossingName) 
     if not crossingName then
-        sendMsg("Error", "Level crossing data not found", 4)
+        sendMsg("Error", "The level crossing data could not be located.", 4)
         return
     end
-    sendMsg("Crossing Secured", string.format("The %s Level Crossing is now secured for trains.", crossingName), 4) 
+    sendMsg("Crossing Secured", string.format("The %s Level Crossing is now secured for train movements.", crossingName), 4) 
 end
 
 return Notifications
