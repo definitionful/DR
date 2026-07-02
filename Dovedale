@@ -711,6 +711,58 @@ Tabs.DE:AddButton({
     end
 })
 
+Tabs.SAT:AddSection("Arrivals from Dovedale East")
+
+Tabs.SAT:AddButton({
+    Title = "Route to Siding No.1",
+    Description = "Routes incoming train from Dovedale East to Siding No.1.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
+        executeRoute("SAT", "DE_Siding1", "Dovedale East", "Siding No.1")
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Route to Siding No.2",
+    Description = "Routes incoming train from Dovedale East to Siding No.2.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
+        executeRoute("SAT", "DE_Siding2", "Dovedale East", "Siding No.2")
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Route to Siding No.3",
+    Description = "Routes incoming train from Dovedale East to Siding No.3.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
+        executeRoute("SAT", "DE_Siding3", "Dovedale East", "Siding No.3")
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Route to Platform 1",
+    Description = "Routes incoming train from Dovedale East to Platform 1.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
+        executeRoute("SAT", "DE_Platform1", "Dovedale East", "Platform 1")
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Route to Platform 2",
+    Description = "Routes incoming train from Dovedale East to Platform 2.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
+        executeRoute("SAT", "DE_Platform2", "Dovedale East", "Platform 2")
+    end
+})
+
 Tabs.SAT:AddSection("Departures to Dovedale East")
 
 Tabs.SAT:AddButton({
@@ -718,7 +770,6 @@ Tabs.SAT:AddButton({
     Description = "Routes outgoing train from Siding No.1 to Dovedale East.",
     Callback = function()
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
-        if not checkSATClearance() then Messages.ClearanceDenied("Dovedale East") return end
         if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
         executeRoute("SAT", "Siding1_DE", "Siding No.1", "Dovedale East")
     end
@@ -729,7 +780,6 @@ Tabs.SAT:AddButton({
     Description = "Routes outgoing train from Siding No.2 to Dovedale East.",
     Callback = function()
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
-        if not checkSATClearance() then Messages.ClearanceDenied("Dovedale East") return end
         if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
         executeRoute("SAT", "Siding2_DE", "Siding No.2", "Dovedale East")
     end
@@ -740,9 +790,30 @@ Tabs.SAT:AddButton({
     Description = "Routes outgoing train from Siding No.3 to Dovedale East.",
     Callback = function()
         if not isPlayerInsideBox() then Messages.PositionRequired() return end
-        if not checkSATClearance() then Messages.ClearanceDenied("Dovedale East") return end
         if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
         executeRoute("SAT", "Siding3_DE", "Siding No.3", "Dovedale East")
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Dispatch Platform 1",
+    Description = "Routes outgoing train from Platform 1 to Dovedale East.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Dovedale East") return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
+        executeRoute("SAT", "Platform1_DE", "Platform 1", "Dovedale East")
+    end
+})
+
+Tabs.SAT:AddButton({
+    Title = "Dispatch Platform 2",
+    Description = "Routes outgoing train from Platform 2 to Dovedale East.",
+    Callback = function()
+        if not isPlayerInsideBox() then Messages.PositionRequired() return end
+        if not checkSATClearance() then Messages.ClearanceDenied("Dovedale East") return end
+        if not checkSATCrossing() then Messages.CrossingUnsecured("Satus") return end
+        executeRoute("SAT", "Platform2_DE", "Platform 2", "Dovedale East")
     end
 })
 
